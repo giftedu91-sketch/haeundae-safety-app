@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0077b6" />
+  <title>해운대 바다안전</title>
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --primary: #0077b6;
+      --secondary: #00b4d8;
+      --navy: #16324f;
+      --surface: #ffffff;
+      --background: #eaf7fb;
+      --muted: #607d8b;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --safe: #22c55e;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, "Noto Sans KR", sans-serif;
+    }
+
+    body {
+      background: var(--background);
+      color: var(--navy);
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible {
+      outline: 3px solid rgba(0, 180, 216, 0.35);
+      outline-offset: 2px;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100vh;
+      margin: 0 auto;
+      background: #f7fcfe;
+      padding-bottom: 88px;
+      box-shadow: 0 0 25px rgba(0, 68, 102, 0.15);
+    }
+
+    .header {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 24px 20px 20px;
+      border-radius: 0 0 28px 28px;
+    }
+
+    .header-top,
+    .confidence-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 22px;
+      font-weight: 800;
+    }
+
+    .logo span {
+      color: #caf0f8;
+    }
+
+    .notification-button {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      font-size: 20px;
+    }
+
+    .header-description {
+      margin-top: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      color: #e7f9ff;
+    }
+
+    .status-card {
+      margin: 18px 16px 0;
+      padding: 17px;
+      background: white;
+      border-radius: 18px;
+      box-shadow: 0 7px 22px rgba(0, 87, 130, 0.12);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-title {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .status-level {
+      font-size: 21px;
+      font-weight: 800;
+      color: var(--warning);
+    }
+
+    .status-icon {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: #fff3cd;
+      font-size: 28px;
+    }
+
+    .content {
+      padding: 18px 16px;
+    }
+
+    .section {
+      display: none;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .section-subtitle {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #5c7280;
+      margin-bottom: 16px;
+    }
+
+    #map {
+      width: 100%;
+      height: 330px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 6px 18px rgba(0, 81, 120, 0.12);
+    }
+
+    .legend {
+      display: flex;
+      justify-content: space-around;
+      background: white;
+      border-radius: 16px;
+      margin-top: 12px;
+      padding: 12px 8px;
+      box-shadow: 0 5px 16px rgba(0, 81, 120, 0.08);
+      font-size: 13px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .legend-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+    }
+
+    .green { background: var(--safe); }
+    .yellow { background: #facc15; }
+    .red { background: var(--danger); }
+
+    .warning-box,
+    .ai-warning {
+      margin-top: 14px;
+      padding: 15px;
+      border-radius: 16px;
+      background: #fff7db;
+      border-left: 5px solid var(--warning);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .primary-button,
+    .secondary-button,
+    .danger-button,
+    .capture-button,
+    .stop-camera-button {
+      width: 100%;
+      margin-top: 10px;
+      padding: 15px;
+      border-radius: 14px;
+      font-weight: 800;
+    }
+
+    .primary-button {
+      margin-top: 14px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+    }
+
+    .secondary-button {
+      background: #e0f4fb;
+      color: var(--primary);
+    }
+
+    .danger-button {
+      background: var(--danger);
+      color: white;
+    }
+
+    .capture-button {
+      background: #16a34a;
+      color: white;
+    }
+
+    .capture-button:disabled {
+      background: #a7bac4;
+      cursor: not-allowed;
+    }
+
+    .stop-camera-button {
+      padding: 13px;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .camera-container {
+      width: 100%;
+      height: 360px;
+      position: relative;
+      overflow: hidden;
+      background: #041f2c;
+      border-radius: 22px;
+      box-shadow: 0 8px 24px rgba(0, 49, 73, 0.22);
+    }
+
+    #cameraVideo,
+    #captureCanvas {
+      display: none;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #cameraVideo.active,
+    #captureCanvas.active {
+      display: block;
+    }
+
+    .camera-placeholder {
+      width: 100%;
+      height: 100%;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .camera-placeholder.hidden { display: none; }
+    .camera-placeholder-icon { font-size: 70px; margin-bottom: 15px; }
+    .camera-placeholder h3 { margin-bottom: 10px; }
+    .camera-placeholder p { color: #b8e7f4; font-size: 14px; line-height: 1.6; }
+
+    .scan-frame {
+      display: none;
+      position: absolute;
+      width: 75%;
+      height: 65%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      border: 3px solid #48e5c2;
+      border-radius: 24px;
+      pointer-events: none;
+    }
+
+    .scan-frame.active { display: block; }
+
+    .scan-line {
+      position: absolute;
+      left: 5%;
+      width: 90%;
+      height: 3px;
+      background: #48e5c2;
+      box-shadow: 0 0 14px #48e5c2;
+      animation: cameraScan 2.2s infinite linear;
+    }
+
+    @keyframes cameraScan {
+      0%, 100% { top: 8%; }
+      50% { top: 90%; }
+    }
+
+    .analysis-loading {
+      display: none;
+      margin-top: 18px;
+      padding: 26px 18px;
+      background: white;
+      border-radius: 20px;
+      text-align: center;
+      box-shadow: 0 7px 20px rgba(0, 81, 120, 0.1);
+    }
+
+    .analysis-loading.show { display: block; }
+    .analysis-loading p { margin-top: 8px; color: #6b8491; font-size: 13px; }
+
+    .loading-spinner {
+      width: 47px;
+      height: 47px;
+      margin: 0 auto 15px;
+      border: 5px solid #dceff5;
+      border-top-color: #00a8cc;
+      border-radius: 50%;
+      animation: loadingRotate 0.8s linear infinite;
+    }
+
+    @keyframes loadingRotate { to { transform: rotate(360deg); } }
+
+    .species-result {
+      display: none;
+      margin-top: 18px;
+      background: white;
+      border-radius: 22px;
+      overflow: hidden;
+      box-shadow: 0 8px 25px rgba(0, 81, 120, 0.14);
+    }
+
+    .species-result.show { display: block; }
+
+    .result-image-wrapper {
+      position: relative;
+      width: 100%;
+      height: 260px;
+      background: #dceff5;
+    }
+
+    .captured-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .risk-badge {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      padding: 8px 15px;
+      border-radius: 30px;
+      color: white;
+      font-size: 13px;
+      font-weight: 800;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    }
+
+    .risk-badge.high { background: #dc2626; }
+    .risk-badge.medium { background: var(--warning); }
+    .risk-badge.low { background: #16a34a; }
+
+    .species-content { padding: 20px; }
+    .result-label { margin-bottom: 5px; color: #0096c7; font-size: 13px; font-weight: 800; }
+    .species-content h2 { margin-bottom: 3px; color: #123247; font-size: 24px; }
+    .scientific-name { color: #78909c; font-size: 13px; font-style: italic; }
+    .confidence-box { margin: 18px 0; }
+    .confidence-top { margin-bottom: 8px; font-size: 13px; }
+    .confidence-top strong { color: var(--primary); }
+
+    .confidence-bar {
+      width: 100%;
+      height: 10px;
+      overflow: hidden;
+      background: #dcecf1;
+      border-radius: 10px;
+    }
+
+    .confidence-progress {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--secondary), var(--primary));
+      border-radius: 10px;
+      transition: width 1s ease;
+    }
+
+    .species-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 17px;
+    }
+
+    .species-info-item {
+      padding: 14px;
+      background: #eff9fc;
+      border-radius: 13px;
+    }
+
+    .species-info-item span {
+      display: block;
+      margin-bottom: 5px;
+      color: #6c8490;
+      font-size: 11px;
+    }
+
+    .species-info-item strong { font-size: 14px; }
+
+    .information-box,
+    .danger-information-box,
+    .action-information-box {
+      margin-top: 12px;
+      padding: 15px;
+      border-radius: 15px;
+    }
+
+    .information-box { background: #edf8fc; border-left: 5px solid #00a8cc; }
+    .danger-information-box { background: #fff1f2; border-left: 5px solid var(--danger); }
+    .action-information-box { background: #f0fdf4; border-left: 5px solid var(--safe); }
+
+    .information-box h3,
+    .danger-information-box h3,
+    .action-information-box h3 { margin-bottom: 8px; font-size: 15px; }
+
+    .information-box p,
+    .danger-information-box p,
+    .action-information-box p { color: #405866; font-size: 13px; line-height: 1.65; }
+
+    .ai-warning { font-size: 12px; color: #745b00; }
+
+    .guide-card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 14px;
+      box-shadow: 0 5px 16px rgba(0, 81, 120, 0.09);
+    }
+
+    .guide-card h3 { margin-bottom: 12px; color: var(--primary); }
+
+    .guide-step {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      align-items: flex-start;
+    }
+
+    .step-number {
+      min-width: 31px;
+      height: 31px;
+      border-radius: 50%;
+      background: var(--secondary);
+      color: white;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+    }
+
+    .step-text { font-size: 14px; line-height: 1.6; }
+
+    .emergency-symptoms {
+      background: #fff1f2;
+      border: 1px solid #fecdd3;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+
+    .emergency-symptoms h3 { color: #dc2626; margin-bottom: 10px; }
+    .emergency-symptoms li { margin-left: 18px; margin-bottom: 7px; font-size: 14px; }
+
+    .setting-card {
+      background: white;
+      padding: 16px;
+      margin-bottom: 12px;
+      border-radius: 17px;
+      box-shadow: 0 5px 15px rgba(0, 81, 120, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .setting-info h3 { font-size: 15px; margin-bottom: 5px; }
+    .setting-info p { font-size: 12px; color: #718591; line-height: 1.4; }
+
+    .switch { position: relative; min-width: 50px; width: 50px; height: 28px; }
+    .switch input { display: none; }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+      background: #cbd5e1;
+      border-radius: 30px;
+      transition: 0.3s;
+    }
+
+    .slider::before {
+      content: "";
+      position: absolute;
+      width: 22px;
+      height: 22px;
+      left: 3px;
+      top: 3px;
+      border-radius: 50%;
+      background: white;
+      transition: 0.3s;
+    }
+
+    .switch input:checked + .slider { background: var(--secondary); }
+    .switch input:checked + .slider::before { transform: translateX(22px); }
+
+    .bottom-navigation {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      height: 74px;
+      background: white;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      box-shadow: 0 -5px 20px rgba(0, 68, 102, 0.13);
+      z-index: 999;
+    }
+
+    .nav-button {
+      flex: 1;
+      height: 100%;
+      background: transparent;
+      color: #78909c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 12px;
+    }
+
+    .nav-icon { font-size: 22px; }
+    .nav-button.active { color: var(--primary); font-weight: 800; }
+
+    .toast {
+      display: none;
+      position: fixed;
+      bottom: 95px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: calc(100% - 40px);
+      max-width: 430px;
+      background: var(--navy);
+      color: white;
+      padding: 14px 18px;
+      border-radius: 13px;
+      text-align: center;
+      font-size: 14px;
+      z-index: 2000;
+    }
+
+    .toast.show { display: block; }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="header-top">
+        <div class="logo">해운대 <span>바다안전</span></div>
+        <button class="notification-button" type="button" aria-label="안전 알림 확인" onclick="showToast('새로운 안전 알림이 없습니다.')">🔔</button>
+      </div>
+      <p class="header-description">실시간 유해 해양생물 출몰 정보와<br />사고 발생 시 응급처치 방법을 확인하세요.</p>
+    </header>
+
+    <section class="status-card">
+      <div>
+        <div class="status-title">오늘의 해운대 해양안전 상태</div>
+        <div class="status-level">주의 단계</div>
+      </div>
+      <div class="status-icon" aria-hidden="true">⚠️</div>
+    </section>
+
+    <div class="content">
+      <section id="mapSection" class="section active">
+        <h2 class="section-title">해운대 안전지도</h2>
+        <p class="section-subtitle">해운대와 인근 지역의 유해 해양생물 출몰 위치를 확인합니다.</p>
+        <div id="map" aria-label="해운대 유해 생물 출몰 지도"></div>
+        <div class="legend">
+          <div class="legend-item"><span class="legend-dot green"></span>안전</div>
+          <div class="legend-item"><span class="legend-dot yellow"></span>주의</div>
+          <div class="legend-item"><span class="legend-dot red"></span>위험</div>
+        </div>
+        <div class="warning-box"><strong>최근 출몰 정보</strong><br />해운대해수욕장 동쪽 구역에서 해파리 출몰 신고가 접수되었습니다. 입수 시 주의하세요.</div>
+      </section>
+
+      <section id="detectSection" class="section">
+        <h2 class="section-title">카메라 유해 생물 탐지</h2>
+        <p class="section-subtitle">카메라로 촬영하거나 사진을 선택하면 촬영 이미지와 생물 종 정보를 표시합니다.</p>
+
+        <div class="camera-container">
+          <video id="cameraVideo" autoplay playsinline muted></video>
+          <canvas id="captureCanvas"></canvas>
+          <div id="cameraPlaceholder" class="camera-placeholder">
+            <div class="camera-placeholder-icon">📷</div>
+            <h3>카메라를 실행해 주세요</h3>
+            <p>생물을 직접 만지지 말고<br />안전한 거리에서 촬영하세요.</p>
+          </div>
+          <div class="scan-frame"><div class="scan-line"></div></div>
+        </div>
+
+        <button id="startCameraButton" class="primary-button" type="button" onclick="startCamera()">📷 카메라 실행</button>
+        <button id="captureButton" class="capture-button" type="button" onclick="capturePhoto()" disabled>⭕ 사진 촬영 및 생물 분석</button>
+        <button class="secondary-button" type="button" onclick="document.getElementById('imageUpload').click()">🖼️ 갤러리에서 사진 선택</button>
+        <input id="imageUpload" type="file" accept="image/*" capture="environment" hidden onchange="uploadImage(event)" />
+        <button class="stop-camera-button" type="button" onclick="stopCamera(true)">카메라 종료</button>
+
+        <div id="analysisLoading" class="analysis-loading" aria-live="polite">
+          <div class="loading-spinner"></div>
+          <strong>해양생물을 분석하고 있습니다</strong>
+          <p>사진 속 생물의 특징을 확인하는 중입니다.</p>
+        </div>
+
+        <div id="speciesResult" class="species-result" aria-live="polite">
+          <div class="result-image-wrapper">
+            <img id="capturedImage" class="captured-image" alt="촬영된 해양생물 사진" />
+            <div id="riskBadge" class="risk-badge high">위험</div>
+          </div>
+
+          <div class="species-content">
+            <p class="result-label">AI 탐지 결과</p>
+            <h2 id="speciesName">노무라입깃해파리</h2>
+            <p id="scientificName" class="scientific-name">Nemopilema nomurai</p>
+
+            <div class="confidence-box">
+              <div class="confidence-top"><span>AI 일치도</span><strong id="confidenceText">92%</strong></div>
+              <div class="confidence-bar"><div id="confidenceProgress" class="confidence-progress"></div></div>
+            </div>
+
+            <div class="species-info-grid">
+              <div class="species-info-item"><span>위험도</span><strong id="riskLevel">높음</strong></div>
+              <div class="species-info-item"><span>주요 출현 시기</span><strong id="appearanceSeason">7월~11월</strong></div>
+              <div class="species-info-item"><span>주요 서식지</span><strong id="habitat">연안 및 외해</strong></div>
+              <div class="species-info-item"><span>주의 거리</span><strong id="safeDistance">5m 이상</strong></div>
+            </div>
+
+            <div class="information-box"><h3>🔎 생물 특징</h3><p id="speciesDescription"></p></div>
+            <div class="danger-information-box"><h3>⚠️ 위험 정보</h3><p id="dangerDescription"></p></div>
+            <div class="action-information-box"><h3>✅ 발견 시 행동요령</h3><p id="actionGuide"></p></div>
+
+            <button class="danger-button" type="button" onclick="openSection('firstAidSection', 2)">🩹 쏘임 사고 응급처치 보기</button>
+            <button class="secondary-button" type="button" onclick="reportDetectedSpecies()">📍 현재 위치에 출몰 신고</button>
+            <button class="secondary-button" type="button" onclick="resetCameraAnalysis()">🔄 다른 생물 다시 촬영</button>
+          </div>
+        </div>
+
+        <p class="ai-warning">※ 현재 종 판별 결과는 앱 시연용입니다. 실제 서비스에서는 학습된 AI 모델이나 분석 API를 연결해야 합니다.</p>
+      </section>
+
+      <section id="firstAidSection" class="section">
+        <h2 class="section-title">쏘임 사고 응급처치</h2>
+        <p class="section-subtitle">사고 발생 시 침착하게 아래 순서대로 행동하세요.</p>
+
+        <div class="guide-card">
+          <h3>🪼 해파리 쏘임 응급처치</h3>
+          <div class="guide-step"><div class="step-number">1</div><div class="step-text">즉시 물 밖으로 이동하고 안전한 장소로 대피합니다.</div></div>
+          <div class="guide-step"><div class="step-number">2</div><div class="step-text">안전요원이나 주변 사람에게 도움을 요청합니다.</div></div>
+          <div class="guide-step"><div class="step-number">3</div><div class="step-text">쏘인 부위를 바닷물로 조심스럽게 씻어냅니다. 상처를 문지르지 마세요.</div></div>
+          <div class="guide-step"><div class="step-number">4</div><div class="step-text">피부에 남은 촉수는 맨손으로 만지지 말고 보호 장갑이나 도구를 사용합니다.</div></div>
+          <div class="guide-step"><div class="step-number">5</div><div class="step-text">호흡곤란, 어지럼증, 의식 저하가 나타나면 즉시 119에 신고합니다.</div></div>
+        </div>
+
+        <div class="emergency-symptoms">
+          <h3>즉시 119 신고가 필요한 증상</h3>
+          <ul>
+            <li>호흡곤란 또는 가슴 통증</li>
+            <li>심한 어지럼증과 의식 저하</li>
+            <li>얼굴이나 입술의 심한 부종</li>
+            <li>전신 두드러기 또는 심한 통증</li>
+          </ul>
+        </div>
+
+        <button class="danger-button" type="button" onclick="call119()">📞 119 긴급전화</button>
+        <button class="secondary-button" type="button" onclick="shareLocation()">📍 현재 위치 공유</button>
+      </section>
+
+      <section id="settingSection" class="section">
+        <h2 class="section-title">안전 정보 및 알림 설정</h2>
+        <p class="section-subtitle">필요한 안전 정보를 선택하여 알림을 받을 수 있습니다.</p>
+
+        <div class="setting-card"><div class="setting-info"><h3>유해 생물 출몰 알림</h3><p>해파리 등 유해 생물 신고 시 알림</p></div><label class="switch"><input type="checkbox" checked onchange="settingChanged(this)" /><span class="slider"></span></label></div>
+        <div class="setting-card"><div class="setting-info"><h3>내 위치 주변 위험 알림</h3><p>현재 위치 반경 1km 이내 위험 정보</p></div><label class="switch"><input type="checkbox" checked onchange="settingChanged(this)" /><span class="slider"></span></label></div>
+        <div class="setting-card"><div class="setting-info"><h3>입수 통제 알림</h3><p>해수욕장 입수 통제와 해제 안내</p></div><label class="switch"><input type="checkbox" onchange="settingChanged(this)" /><span class="slider"></span></label></div>
+        <div class="setting-card"><div class="setting-info"><h3>기상 및 파도 위험 알림</h3><p>강풍, 높은 파도 등 위험 기상 안내</p></div><label class="switch"><input type="checkbox" checked onchange="settingChanged(this)" /><span class="slider"></span></label></div>
+        <button class="primary-button" type="button" onclick="requestNotificationPermission()">🔔 알림 권한 허용</button>
+      </section>
+    </div>
+
+    <nav class="bottom-navigation" aria-label="하단 메뉴">
+      <button class="nav-button active" type="button" onclick="openSection('mapSection', 0)"><span class="nav-icon">🗺️</span>안전지도</button>
+      <button class="nav-button" type="button" onclick="openSection('detectSection', 1)"><span class="nav-icon">📷</span>AI 탐지</button>
+      <button class="nav-button" type="button" onclick="openSection('firstAidSection', 2)"><span class="nav-icon">🩹</span>응급처치</button>
+      <button class="nav-button" type="button" onclick="openSection('settingSection', 3)"><span class="nav-icon">🔔</span>안전알림</button>
+    </nav>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module">
+    import { pipeline } from "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
+
+    let map = null;
+    let cameraStream = null;
+    let selectedImageData = null;
+    let detectedSpecies = null;
+    let toastTimer = null;
+    let marineClassifier = null;
+    let classifierLoadingPromise = null;
+
+    const AI_MODEL = "Xenova/clip-vit-base-patch32";
+
+    const candidateLabels = [
+      "Nomura jellyfish",
+      "moon jellyfish",
+      "blue-ringed octopus",
+      "lionfish"
+    ];
+
+    const labelToSpeciesIndex = {
+      "Nomura jellyfish": 0,
+      "moon jellyfish": 1,
+      "blue-ringed octopus": 2,
+      "lionfish": 3
+    };
+
+    const speciesDatabase = [
+      {
+        name: "노무라입깃해파리",
+        scientificName: "Nemopilema nomurai",
+        riskText: "위험",
+        riskLevel: "높음",
+        riskClass: "high",
+        season: "7월~11월",
+        habitat: "연안 및 외해",
+        safeDistance: "5m 이상",
+        confidence: 92,
+        description: "대형 해파리로 반투명하거나 갈색을 띠며 굵고 긴 구완이 있습니다.",
+        danger: "촉수에 접촉하면 강한 통증, 발진, 부종이 나타날 수 있습니다.",
+        action: "최소 5m 이상 거리를 유지하고 절대로 맨손으로 만지지 마세요."
+      },
+      {
+        name: "보름달물해파리",
+        scientificName: "Aurelia coerulea",
+        riskText: "주의",
+        riskLevel: "보통",
+        riskClass: "medium",
+        season: "5월~9월",
+        habitat: "연안과 항구",
+        safeDistance: "3m 이상",
+        confidence: 88,
+        description: "투명한 우산 모양 몸 안쪽에 네 개의 말발굽 형태가 보이는 해파리입니다.",
+        danger: "피부가 민감한 사람은 따가움, 가려움, 발진이 나타날 수 있습니다.",
+        action: "접촉하지 말고 천천히 물 밖으로 이동한 뒤 안전요원의 안내를 받으세요."
+      },
+      {
+        name: "파란고리문어",
+        scientificName: "Hapalochlaena spp.",
+        riskText: "매우 위험",
+        riskLevel: "매우 높음",
+        riskClass: "high",
+        season: "연중",
+        habitat: "암초와 얕은 바다",
+        safeDistance: "10m 이상",
+        confidence: 90,
+        description: "몸에 파란색 고리 무늬가 나타나는 작은 문어입니다.",
+        danger: "강한 신경독을 가지고 있어 물리면 마비와 호흡곤란이 발생할 수 있습니다.",
+        action: "즉시 멀리 떨어지고 안전요원 또는 119에 신고하세요."
+      },
+      {
+        name: "쏠배감펭",
+        scientificName: "Pterois lunulata",
+        riskText: "위험",
+        riskLevel: "높음",
+        riskClass: "high",
+        season: "여름~가을",
+        habitat: "암초와 방파제",
+        safeDistance: "5m 이상",
+        confidence: 85,
+        description: "붉은색과 갈색 줄무늬, 부채처럼 펼쳐진 지느러미와 긴 가시가 특징입니다.",
+        danger: "독가시에 찔리면 심한 통증, 부종, 메스꺼움 등이 나타날 수 있습니다.",
+        action: "가까이 접근하거나 잡지 말고 발견 위치를 안전요원에게 알려주세요."
+      }
+    ];
+
+    function initializeMap() {
+      map = L.map("map").setView([35.1587, 129.1604], 14);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+
+      const locations = [
+        [35.1587, 129.1604, "해운대해수욕장 중앙", "주의", "#facc15"],
+        [35.1603, 129.1715, "미포 방면", "위험", "#ef4444"],
+        [35.1536, 129.1512, "동백섬 방면", "안전", "#22c55e"],
+        [35.1788, 129.1997, "송정해수욕장", "주의", "#facc15"]
+      ];
+
+      locations.forEach(([latitude, longitude, name, level, color]) => {
+        L.circleMarker([latitude, longitude], {
+          radius: 11,
+          fillColor: color,
+          color: "#ffffff",
+          weight: 3,
+          fillOpacity: 0.9
+        }).addTo(map).bindPopup(`<strong>${name}</strong><br />위험 단계: ${level}`);
+      });
+
+      L.marker([35.1583, 129.1590]).addTo(map).bindPopup("<strong>해운대 안전관리센터</strong><br />응급상황 발생 시 도움을 요청하세요.");
+    }
+
+    function openSection(sectionId, navIndex) {
+      document.querySelectorAll(".section").forEach(section => section.classList.remove("active"));
+      document.querySelectorAll(".nav-button").forEach(button => button.classList.remove("active"));
+      document.getElementById(sectionId).classList.add("active");
+      document.querySelectorAll(".nav-button")[navIndex].classList.add("active");
+
+      if (sectionId !== "detectSection") stopCamera(false);
+      if (sectionId === "mapSection" && map) setTimeout(() => map.invalidateSize(), 100);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showToast("이 브라우저에서는 카메라를 사용할 수 없습니다.");
+        return;
+      }
+
+      stopCamera(false);
+      const video = document.getElementById("cameraVideo");
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+          audio: false
+        });
+        video.srcObject = cameraStream;
+        await video.play();
+        video.classList.add("active");
+        document.getElementById("captureCanvas").classList.remove("active");
+        document.getElementById("cameraPlaceholder").classList.add("hidden");
+        document.querySelector(".scan-frame").classList.add("active");
+        document.getElementById("captureButton").disabled = false;
+        showToast("카메라가 실행되었습니다.");
+      } catch (error) {
+        console.error(error);
+        showToast(error.name === "NotAllowedError" ? "카메라 권한을 허용해 주세요." : "카메라를 실행할 수 없습니다. HTTPS 또는 localhost에서 실행하세요.");
+      }
+    }
+
+    function capturePhoto() {
+      const video = document.getElementById("cameraVideo");
+      const canvas = document.getElementById("captureCanvas");
+      if (!cameraStream || !video.videoWidth) {
+        showToast("먼저 카메라를 실행해 주세요.");
+        return;
+      }
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      selectedImageData = canvas.toDataURL("image/jpeg", 0.9);
+      canvas.classList.add("active");
+      video.classList.remove("active");
+      document.querySelector(".scan-frame").classList.remove("active");
+      stopCameraStreamOnly();
+      analyzeMarineImage(selectedImageData);
+    }
+
+    function uploadImage(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showToast("이미지 파일만 선택할 수 있습니다.");
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        showToast("10MB 이하의 사진을 선택해 주세요.");
+        event.target.value = "";
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          const canvas = document.getElementById("captureCanvas");
+          const scale = Math.min(1, 1280 / image.width);
+          canvas.width = Math.round(image.width * scale);
+          canvas.height = Math.round(image.height * scale);
+          canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+          selectedImageData = canvas.toDataURL("image/jpeg", 0.9);
+          canvas.classList.add("active");
+          document.getElementById("cameraVideo").classList.remove("active");
+          document.getElementById("cameraPlaceholder").classList.add("hidden");
+          document.querySelector(".scan-frame").classList.remove("active");
+          stopCameraStreamOnly();
+          analyzeMarineImage(selectedImageData);
+        };
+        image.src = reader.result;
+      };
+      reader.onerror = () => showToast("사진을 불러오지 못했습니다.");
+      reader.readAsDataURL(file);
+    }
+
+    async function loadMarineClassifier() {
+      if (marineClassifier) return marineClassifier;
+      if (classifierLoadingPromise) return classifierLoadingPromise;
+
+      classifierLoadingPromise = pipeline(
+        "zero-shot-image-classification",
+        AI_MODEL,
+        { dtype: "q8" }
+      ).then(classifier => {
+        marineClassifier = classifier;
+        return classifier;
+      }).catch(error => {
+        classifierLoadingPromise = null;
+        throw error;
+      });
+
+      return classifierLoadingPromise;
+    }
+
+    async function analyzeMarineImage(imageData) {
+      const loading = document.getElementById("analysisLoading");
+      const result = document.getElementById("speciesResult");
+      const loadingTitle = loading.querySelector("strong");
+      const loadingText = loading.querySelector("p");
+
+      result.classList.remove("show");
+      loading.classList.add("show");
+      document.getElementById("capturedImage").src = imageData;
+
+      try {
+        loadingTitle.textContent = "AI 모델을 준비하고 있습니다";
+        loadingText.textContent = "처음 실행할 때는 모델 다운로드로 시간이 걸릴 수 있습니다.";
+
+        const classifier = await loadMarineClassifier();
+
+        loadingTitle.textContent = "해양생물을 분석하고 있습니다";
+        loadingText.textContent = "사진 특징을 등록된 위험 생물 후보와 비교하는 중입니다.";
+
+        const predictions = await classifier(imageData, candidateLabels, {
+          hypothesis_template: "This is a photo of {}."
+        });
+
+        if (!Array.isArray(predictions) || predictions.length === 0) {
+          throw new Error("AI 분석 결과가 없습니다.");
+        }
+
+        const bestPrediction = predictions[0];
+        const speciesIndex = labelToSpeciesIndex[bestPrediction.label];
+
+        if (speciesIndex === undefined) {
+          throw new Error("등록되지 않은 AI 분류 결과입니다.");
+        }
+
+        detectedSpecies = {
+          ...speciesDatabase[speciesIndex],
+          confidence: Math.max(1, Math.min(99, Math.round(bestPrediction.score * 100)))
+        };
+
+        displaySpeciesInformation(detectedSpecies);
+        result.classList.add("show");
+        result.scrollIntoView({ behavior: "smooth", block: "start" });
+        showToast(`${detectedSpecies.name}로 분석되었습니다.`);
+      } catch (error) {
+        console.error("AI 분석 오류:", error);
+        showToast("AI 분석에 실패했습니다. 인터넷 연결 후 다시 시도해 주세요.");
+      } finally {
+        loading.classList.remove("show");
+        loadingTitle.textContent = "해양생물을 분석하고 있습니다";
+        loadingText.textContent = "사진 속 생물의 특징을 확인하는 중입니다.";
+      }
+    }
+
+    function displaySpeciesInformation(species) {
+      document.getElementById("speciesName").textContent = species.name;
+      document.getElementById("scientificName").textContent = species.scientificName;
+      document.getElementById("confidenceText").textContent = `${species.confidence}%`;
+      document.getElementById("riskLevel").textContent = species.riskLevel;
+      document.getElementById("appearanceSeason").textContent = species.season;
+      document.getElementById("habitat").textContent = species.habitat;
+      document.getElementById("safeDistance").textContent = species.safeDistance;
+      document.getElementById("speciesDescription").textContent = species.description;
+      document.getElementById("dangerDescription").textContent = species.danger;
+      document.getElementById("actionGuide").textContent = species.action;
+
+      const badge = document.getElementById("riskBadge");
+      badge.textContent = species.riskText;
+      badge.className = `risk-badge ${species.riskClass}`;
+
+      const progress = document.getElementById("confidenceProgress");
+      progress.style.width = "0%";
+      requestAnimationFrame(() => setTimeout(() => { progress.style.width = `${species.confidence}%`; }, 50));
+    }
+
+    function stopCameraStreamOnly() {
+      if (cameraStream) cameraStream.getTracks().forEach(track => track.stop());
+      cameraStream = null;
+      document.getElementById("captureButton").disabled = true;
+    }
+
+    function stopCamera(showMessage) {
+      stopCameraStreamOnly();
+      const video = document.getElementById("cameraVideo");
+      video.srcObject = null;
+      video.classList.remove("active");
+      document.querySelector(".scan-frame").classList.remove("active");
+      if (showMessage) {
+        document.getElementById("cameraPlaceholder").classList.remove("hidden");
+        showToast("카메라가 종료되었습니다.");
+      }
+    }
+
+    function resetCameraAnalysis() {
+      document.getElementById("speciesResult").classList.remove("show");
+      document.getElementById("analysisLoading").classList.remove("show");
+      document.getElementById("captureCanvas").classList.remove("active");
+      document.getElementById("cameraPlaceholder").classList.remove("hidden");
+      document.getElementById("imageUpload").value = "";
+      selectedImageData = null;
+      detectedSpecies = null;
+      startCamera();
+    }
+
+    function reportDetectedSpecies() {
+      if (!detectedSpecies) {
+        showToast("먼저 생물 사진을 분석해 주세요.");
+        return;
+      }
+      reportLocation(detectedSpecies.name);
+    }
+
+    function reportLocation(speciesName = "유해 해양생물") {
+      if (!navigator.geolocation) {
+        showToast("이 브라우저는 위치 기능을 지원하지 않습니다.");
+        return;
+      }
+      showToast("현재 위치를 확인하고 있습니다.");
+      navigator.geolocation.getCurrentPosition(position => {
+        const { latitude, longitude } = position.coords;
+        if (map) {
+          L.circleMarker([latitude, longitude], {
+            radius: 12,
+            fillColor: "#ef4444",
+            color: "#ffffff",
+            weight: 3,
+            fillOpacity: 0.9
+          }).addTo(map).bindPopup(`<strong>사용자 출몰 신고</strong><br />탐지 생물: ${speciesName}`);
+          map.setView([latitude, longitude], 16);
+        }
+        showToast(`${speciesName} 발견 위치가 신고되었습니다.`);
+      }, () => showToast("위치 권한을 허용해 주세요."), {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
+      });
+    }
+
+    function shareLocation() {
+      if (!navigator.geolocation) {
+        showToast("위치 기능을 지원하지 않는 브라우저입니다.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(async position => {
+        const locationUrl = `https://maps.google.com/?q=${position.coords.latitude},${position.coords.longitude}`;
+        try {
+          if (navigator.share) {
+            await navigator.share({ title: "해운대 바다안전 현재 위치", text: "응급상황이 발생했습니다.", url: locationUrl });
+          } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(locationUrl);
+            showToast("현재 위치 링크가 복사되었습니다.");
+          } else {
+            prompt("아래 위치 링크를 복사하세요.", locationUrl);
+          }
+        } catch (error) {
+          if (error.name !== "AbortError") showToast("위치 공유에 실패했습니다.");
+        }
+      }, () => showToast("위치 권한을 허용해 주세요."));
+    }
+
+    function call119() {
+      if (confirm("119에 긴급전화를 연결하시겠습니까?")) window.location.href = "tel:119";
+    }
+
+    function settingChanged(checkbox) {
+      showToast(checkbox.checked ? "안전 알림이 설정되었습니다." : "안전 알림이 해제되었습니다.");
+    }
+
+    async function requestNotificationPermission() {
+      if (!("Notification" in window)) {
+        showToast("이 브라우저는 알림 기능을 지원하지 않습니다.");
+        return;
+      }
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        showToast("알림 권한이 허용되었습니다.");
+        new Notification("해운대 바다안전", { body: "유해 생물 출몰 및 안전 정보를 알려드립니다." });
+      } else {
+        showToast("알림 권한이 허용되지 않았습니다.");
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+    }
+
+    Object.assign(window, {
+      openSection,
+      startCamera,
+      capturePhoto,
+      uploadImage,
+      analyzeMarineImage,
+      stopCamera,
+      resetCameraAnalysis,
+      reportDetectedSpecies,
+      reportLocation,
+      shareLocation,
+      call119,
+      settingChanged,
+      requestNotificationPermission,
+      showToast
+    });
+
+    document.addEventListener("DOMContentLoaded", initializeMap);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) stopCamera(false); });
+    window.addEventListener("beforeunload", () => stopCamera(false));
+  </script>
+</body>
+</html>
