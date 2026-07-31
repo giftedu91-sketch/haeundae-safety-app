@@ -1,0 +1,2 @@
+다운로드한 YOLO 모델 파일을 이 폴더에 넣고 파일 이름을 best.pt로 바꾸세요.
+최종 경로: server/best.pt
